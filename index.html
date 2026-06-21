@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruit Detection & Counting</title>
+<style>
+  :root {
+    --ink: #1a1410;
+    --paper: #faf6f0;
+    --card: #ffffff;
+    --line: #e8ddd0;
+    --accent: #e8682c;       /* 柑橘橙 */
+    --accent-deep: #c44d18;
+    --leaf: #4a7c40;         /* 叶绿 */
+    --muted: #8a7d6e;
+    --shadow: 0 1px 2px rgba(60,40,20,.06), 0 8px 24px rgba(60,40,20,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+  /* Header */
+  header {
+    padding: 36px 0 28px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent-deep); font-weight: 600; margin-bottom: 8px;
+  }
+  h1 { font-size: 30px; font-weight: 700; letter-spacing: -.01em; }
+  h1 .dot { color: var(--accent); }
+  .sub { color: var(--muted); margin-top: 6px; font-size: 15px; }
+  .classes {
+    margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .chip {
+    font-size: 12.5px; padding: 4px 11px; border-radius: 100px;
+    background: #fff; border: 1px solid var(--line); color: var(--ink);
+  }
+
+  /* Controls */
+  .panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow);
+    padding: 22px; margin-top: 24px;
+  }
+  .panel h2 {
+    font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin-bottom: 16px;
+  }
+  .drop {
+    border: 1.5px dashed var(--line); border-radius: 12px;
+    padding: 38px 20px; text-align: center; cursor: pointer;
+    transition: border-color .15s, background .15s;
+    background: #fffdfb;
+  }
+  .drop:hover, .drop.over { border-color: var(--accent); background: #fff7f1; }
+  .drop .icon { font-size: 30px; }
+  .drop .t { margin-top: 8px; font-weight: 600; }
+  .drop .h { margin-top: 3px; font-size: 13px; color: var(--muted); }
+  input[type=file] { display: none; }
+
+  .sliders { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .sld label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+  .sld label b { color: var(--accent-deep); font-variant-numeric: tabular-nums; }
+  .sld .hint { font-size: 11.5px; color: var(--muted); margin-top: 5px; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+
+  .run {
+    margin-top: 18px; width: 100%; padding: 13px;
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer; letter-spacing: .02em;
+    transition: background .15s;
+  }
+  .run:hover { background: var(--accent-deep); }
+  .run:disabled { background: #d8cabb; cursor: not-allowed; }
+
+  /* Results */
+  #results { margin-top: 24px; display: none; }
+  .grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .sliders { grid-template-columns: 1fr; }
+  }
+  .imgbox { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  .imgbox img { width: 100%; display: block; }
+
+  .total {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; box-shadow: var(--shadow); text-align: center; margin-bottom: 14px;
+  }
+  .total .n { font-size: 52px; font-weight: 700; color: var(--accent); line-height: 1; font-variant-numeric: tabular-nums; }
+  .total .l { font-size: 13px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; margin-top: 6px; }
+
+  .breakdown { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .breakdown h3 { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+  .row .name { flex: 0 0 88px; font-size: 14px; font-weight: 500; }
+  .row .bar { flex: 1; height: 8px; background: #f0e8de; border-radius: 100px; overflow: hidden; }
+  .row .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--leaf), #6aa05c); border-radius: 100px; }
+  .row .v { flex: 0 0 28px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color:#fff; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: -3px; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; padding: 36px 0 28px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">YOLO11 · Object Detection</div>
+    <h1>Fruit Detection<span class="dot">·</span>Counting</h1>
+    <p class="sub">Upload an image — the model boxes each fruit and tallies the count.</p>
+    <div class="classes" id="classChips"></div>
+  </header>
+
+  <div class="panel">
+    <h2>Input</h2>
+    <div class="drop" id="drop">
+      <div class="icon">🍎</div>
+      <div class="t">Click or drop an image</div>
+      <div class="h">JPG / PNG · <span id="fname">No file selected</span></div>
+    </div>
+    <input type="file" id="file" accept="image/*">
+
+    <div class="sliders">
+      <div class="sld">
+        <label>Confidence (conf) <b id="confV">0.25</b></label>
+        <input type="range" id="conf" min="0" max="1" step="0.05" value="0.25">
+        <div class="hint">Higher = stricter; too high misses fruit (undercounts)</div>
+      </div>
+      <div class="sld">
+        <label>NMS (iou) <b id="iouV">0.45</b></label>
+        <input type="range" id="iou" min="0" max="1" step="0.05" value="0.45">
+        <div class="hint">Lower merges more overlaps (undercounts)</div>
+      </div>
+    </div>
+
+    <button class="run" id="run" disabled>Select an image to detect</button>
+  </div>
+
+  <div id="results">
+    <div class="grid">
+      <div class="imgbox"><img id="outimg" alt="Detection result"></div>
+      <div>
+        <div class="total">
+          <div class="n" id="totalN">0</div>
+          <div class="l">Total fruit detected</div>
+        </div>
+        <div class="breakdown">
+          <h3>Count by class</h3>
+          <div id="rows"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>Runs locally · FastAPI + Ultralytics YOLO11</footer>
+</div>
+
+<script>
+  const $ = s => document.querySelector(s);
+  let currentFile = null;
+
+  // 载入模型类别
+  fetch('/info').then(r => r.json()).then(d => {
+    const box = $('#classChips');
+    (d.classes || []).forEach(c => {
+      const el = document.createElement('span');
+      el.className = 'chip';
+      el.textContent = c;
+      box.appendChild(el);
+    });
+  }).catch(() => {});
+
+  // 滑块数值同步
+  $('#conf').oninput = e => $('#confV').textContent = (+e.target.value).toFixed(2);
+  $('#iou').oninput  = e => $('#iouV').textContent  = (+e.target.value).toFixed(2);
+
+  // 文件选择
+  const drop = $('#drop'), fileInput = $('#file');
+  drop.onclick = () => fileInput.click();
+  fileInput.onchange = () => setFile(fileInput.files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = e => {
+    e.preventDefault(); drop.classList.remove('over');
+    if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  };
+
+  function setFile(f) {
+    if (!f) return;
+    currentFile = f;
+    $('#fname').textContent = f.name;
+    const btn = $('#run');
+    btn.disabled = false;
+    btn.textContent = 'Detect';
+  }
+
+  // 调用检测
+  $('#run').onclick = async () => {
+    if (!currentFile) return;
+    const btn = $('#run');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Detecting…';
+
+    const fd = new FormData();
+    fd.append('file', currentFile);
+    const conf = $('#conf').value, iou = $('#iou').value;
+
+    try {
+      const res = await fetch(`/detect?conf=${conf}&iou=${iou}`, { method: 'POST', body: fd });
+      const data = await res.json();
+      render(data);
+    } catch (err) {
+      alert('Detection failed. Make sure the server is running.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Detect again';
+    }
+  };
+
+  function render(data) {
+    $('#results').style.display = 'block';
+    $('#outimg').src = 'data:image/jpeg;base64,' + data.image_base64;
+    $('#totalN').textContent = data.total;
+
+    const rows = $('#rows');
+    rows.innerHTML = '';
+    const entries = Object.entries(data.by_class || {});
+    if (entries.length === 0) {
+      rows.innerHTML = '<div class="empty">No fruit detected. Try lowering the conf threshold.</div>';
+      return;
+    }
+    const max = Math.max(...entries.map(([, v]) => v));
+    entries.sort((a, b) => b[1] - a[1]).forEach(([name, v]) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `
+        <span class="name">${name}</span>
+        <span class="bar"><span style="width:${(v / max * 100)}%"></span></span>
+        <span class="v">${v}</span>`;
+      rows.appendChild(row);
+    });
+    $('#results').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
+</body>
+</html>
