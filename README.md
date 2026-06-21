@@ -18,9 +18,9 @@ Everything runs locally — no Docker, no cloud, no API keys.
 
 ## Demo
 
-The web interface lets you upload an image, adjust the confidence and NMS thresholds, and view the annotated result alongside a per-class count.
+Upload an image, adjust the confidence and NMS thresholds, and view the annotated result alongside a per-class count — all in the browser at `http://localhost:8000/`.
 
-> Upload → detect → see boxes + counts, all in the browser at `http://localhost:8000/`.
+![Web interface demo](docs/demo.png)
 
 ---
 
